@@ -1,0 +1,31 @@
+.message {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin: var(--spacing-md) 0;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.message.info {
+  color: var(--primary-dark);
+  background: #dbeafe;
+  border-color: var(--primary-color);
+}
+
+.message.success {
+  color: var(--success-dark);
+  background: var(--success-light);
+  border-color: var(--success-color);
+}
+
+.message.error {
+  color: var(--danger-dark);
+  background: var(--danger-light);
+  border-color: var(--danger-color);
+}
+
+.message.warning {
+  color: var(--warning-dark);
+  background: var(--warning-light);
+  border-color: var(--warning-color);
+}

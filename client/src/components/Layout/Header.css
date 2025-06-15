@@ -1,0 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+.header {
+  background: var(--primary-color, #3b82f6);
+  padding: 1.2rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.header-scrolled {
+  padding: 0.8rem 0;
+  background: rgba(59, 130, 246, 0.98);
+  backdrop-filter: blur(8px);
+}
+
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Logo styling */
+.header-logo {
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.header-logo:hover {
+  transform: translateY(-1px);
+}
+
+.logo-text-main {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  position: relative;
+}
+
+.logo-text-main::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.logo-text-alt {
+  font-weight: 600;
+  opacity: 0.9;
+  margin-left: 1px;
+}
+
+/* Navigation links */
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.welcome-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.welcome-prefix {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.user-name {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.header-link {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  position: relative;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+}
+
+.header-link:hover {
+  color: white;
+  transform: translateY(-1px);
+}
+
+.link-underline {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: white;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.header-link:hover .link-underline {
+  width: 80%;
+  left: 10%;
+}
+
+.header-link.active .link-underline {
+  width: 80%;
+  left: 10%;
+}
+
+/* CTA button styling */
+.header-cta {
+  background-color: white;
+  color: var(--primary-color, #3b82f6) !important;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Logout button */
+.header-logout-btn {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.header-logout-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: all 0.5s ease;
+}
+
+.header-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.header-logout-btn:hover::before {
+  left: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .header-nav {
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .header-links {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .welcome-text {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .welcome-prefix {
+    font-size: 0.8rem;
+  }
+
+  .user-name {
+    font-size: 0.95rem;
+  }
+  
+  .header-logo {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-links {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .header-link, 
+  .header-logout-btn,
+  .header-cta {
+    width: 100%;
+    text-align: center;
+    padding: 0.7rem 1rem;
+  }
+
+  .header-cta {
+    order: -1;
+  }
+  
+  .header-scrolled {
+    padding: 0.6rem 0;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.header {
+  animation: fadeIn 0.5s;
+}
