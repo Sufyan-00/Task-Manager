@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import Select from 'react-select';
 import { TaskContext } from '../../context/TaskContext';
+import { useToast } from '../../context/ToastContext';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import './TaskForm.css';
 
@@ -39,11 +40,11 @@ function toLocalDatetimeInputValue(dateString) {
 
 const TaskForm = ({ taskToEdit, onSubmit, onCancel }) => {
   const [form, setForm] = useState(initialState);
-  const [error, setError] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
   const [isAnimated, setIsAnimated] = useState(false);
   const formRef = useRef(null);
-  const { createTask, updateTask, loading, error: contextError } = useContext(TaskContext);
+  const { createTask, updateTask, loading } = useContext(TaskContext);
+  const { showError, showWarning } = useToast();
 
   useEffect(() => {
     // Trigger animation when component mounts
@@ -70,7 +71,6 @@ const TaskForm = ({ taskToEdit, onSubmit, onCancel }) => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
-    if (error) setError('');
   };
 
   const handleTagsChange = (selected) => {
@@ -105,16 +105,23 @@ const TaskForm = ({ taskToEdit, onSubmit, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     if (!form.title.trim()) {
-      setError('Title is required');
+      showError('Title is required');
       return;
     }
+    if (form.dueDate && new Date(form.dueDate) < new Date()) {
+      showWarning('Due date is in the past. Task will be marked as overdue.');
+    }
     try {
+      // Convert local datetime to UTC ISO string
+      const dueDateUTC = form.dueDate
+        ? new Date(form.dueDate).toISOString()
+        : null;
+
       const taskData = {
         title: form.title.trim(),
         description: form.description.trim(),
-        dueDate: form.dueDate || null,
+        dueDate: dueDateUTC,
         priority: form.priority,
         tags: form.tags,
         notify: form.notify,
@@ -128,7 +135,7 @@ const TaskForm = ({ taskToEdit, onSubmit, onCancel }) => {
       }
       if (onSubmit) onSubmit();
     } catch (err) {
-      setError(err.message || 'Failed to save task');
+      showError('Failed to save task');
     }
   };
 
@@ -185,13 +192,6 @@ const TaskForm = ({ taskToEdit, onSubmit, onCancel }) => {
         </h3>
         <div className="form-underline"></div>
       </div>
-      
-      {(error || contextError) && (
-        <div className="form-error-message">
-          <span className="error-icon">!</span>
-          <span className="error-text">{error || contextError}</span>
-        </div>
-      )}
       
       <form onSubmit={handleSubmit}>
         <div className="task-form-group">

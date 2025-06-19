@@ -1,154 +1,253 @@
-import React, { createContext, useReducer, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import api from '../utils/api';
+import { useToast } from './ToastContext';
 
 const AuthContext = createContext();
 
-const initialState = {
-  user: null,
-  loading: true,
-  error: null,
-};
-
-const authReducer = (state, action) => {
-  switch (action.type) {
-    case 'SET_LOADING':
-      return { ...state, loading: action.payload };
-    case 'LOGIN_SUCCESS':
-      return { ...state, user: action.payload, loading: false, error: null };
-    case 'UPDATE_USER':
-      return { ...state, user: { ...state.user, ...action.payload } };
-    case 'LOGOUT':
-      return { ...state, user: null, loading: false, error: null };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload, loading: false };
-    case 'CLEAR_ERROR':
-      return { ...state, error: null };
-    default:
-      return state;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
+  return context;
 };
 
 const AuthProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const toast = useToast();
 
-  // Check for token on mount
+  // Initialize auth state from storage
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        dispatch({ type: 'SET_LOADING', payload: false });
-        return;
-      }
-
+    const initializeAuth = async () => {
       try {
-        // Verify token isn't expired
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (Date.now() >= payload.exp * 1000) {
-          sessionStorage.removeItem('token');
-          dispatch({ type: 'SET_LOADING', payload: false });
-          return;
-        }
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
         
-        // Fetch user profile
-        await fetchUserProfile();
+        if (token && userData) {
+          // Check if token is expired
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (Date.now() >= payload.exp * 1000) {
+              throw new Error('Token expired');
+            }
+            
+            // Set user data
+            const parsedUser = JSON.parse(userData);
+            setUser(parsedUser);
+            
+            // Set auth header
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            // Verify token with server
+            await api.get('/auth/getProfile');
+          } catch (error) {
+            console.log('Token validation failed:', error.message);
+            logout();
+          }
+        }
       } catch (error) {
-        sessionStorage.removeItem('token');
-        dispatch({ type: 'SET_LOADING', payload: false });
+        console.error('Auth initialization error:', error);
+        logout();
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkAuth();
+    initializeAuth();
   }, []);
 
-  const fetchUserProfile = async () => {
-    try {
-      // Use the auth endpoint specifically for authentication
-      const { data } = await api.get('/auth/getProfile');
-      // Ensure we have all required user fields
-      dispatch({ 
-        type: 'LOGIN_SUCCESS', 
-        payload: {
-          _id: data._id || data.userId,
-          name: data.name || '',
-          email: data.email
+  // Listen for storage changes (cross-tab sync)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'token') {
+        const newToken = e.newValue;
+        const userData = localStorage.getItem('user');
+        
+        if (newToken && userData) {
+          // User logged in from another tab
+          try {
+            const parsedUser = JSON.parse(userData);
+            setUser(parsedUser);
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+            logout();
+          }
+        } else {
+          // User logged out from another tab
+          setUser(null);
+          delete api.defaults.headers.common['Authorization'];
         }
-      });
-    } catch (error) {
-      sessionStorage.removeItem('token');
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Add updateUser function
-  const updateUser = (userData) => {
-    dispatch({ type: 'UPDATE_USER', payload: userData });
-  };
-
-  // Update the login function
-  const login = async (credentials) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'CLEAR_ERROR' });
-    try {
-      const { data } = await api.post('/auth/login', credentials);
-      if (data.success && data.token) {
-        sessionStorage.setItem('token', data.token);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: data.user });
-        return data;
       }
-      throw new Error('Invalid response from server');
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Periodic token validation
+  useEffect(() => {
+    let intervalId;
+    
+    if (user) {
+      intervalId = setInterval(async () => {
+        try {
+          await api.get('/auth/getProfile');
+        } catch (error) {
+          if (error.response?.status === 401) {
+            logout();
+          }
+        }
+      }, 5 * 60 * 1000); // Check every 5 minutes
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user]);
+
+  // Check auth when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && user) {
+        try {
+          await api.get('/auth/getProfile');
+        } catch (error) {
+          if (error.response?.status === 401) {
+            logout();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
+
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data } = await api.post('/auth/login', credentials);
+      
+      if (data.success && data.token && data.user) {
+        // Store in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Set auth header
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        
+        // Update state
+        setUser(data.user);
+        
+        return data;
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed. Check your credentials.';
-      dispatch({ type: 'SET_ERROR', payload: message });
+      const message = 'Login failed. Please check your credentials.';
+      setError(message);
+      toast.error(message); // --- Show error toast ---
       throw new Error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (userData) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'CLEAR_ERROR' });
     try {
+      setLoading(true);
+      setError(null);
+
       const { data } = await api.post('/auth/register', userData);
-      if (data.success && data.token) {
-        sessionStorage.setItem('token', data.token);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: data.user });
+      
+      if (data.success && data.token && data.user) {
+        // Store in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Set auth header
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        
+        // Update state
+        setUser(data.user);
+        
         return data;
+      } else {
+        throw new Error('Invalid response from server');
       }
-      throw new Error('Invalid response from server');
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
-      dispatch({ type: 'SET_ERROR', payload: message });
+      const message ='Registration failed. Please try again.';
+      setError(message);
+      toast.error(message); // --- Show error toast ---
       throw new Error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = () => {
-    sessionStorage.removeItem('token');
-    dispatch({ type: 'LOGOUT' });
+    // Clear storage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('token'); // Clear both to be safe
+    sessionStorage.removeItem('user');
+    
+    // Clear auth header
+    delete api.defaults.headers.common['Authorization'];
+    
+    // Clear state
+    setUser(null);
+    setError(null);
+    
+    // Trigger storage event for other tabs
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'token',
+      oldValue: 'some-token',
+      newValue: null,
+      url: window.location.href
+    }));
+  };
+
+  const updateUser = (userData) => {
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const clearError = () => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    setError(null);
   };
 
-  if (state.loading) {
+  if (loading) {
     return <LoadingSpinner />;
   }
 
+  const value = {
+    user,
+    loading,
+    error,
+    isAuthenticated: !!user,
+    login,
+    register,
+    logout,
+    clearError,
+    updateUser,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user: state.user,
-        loading: state.loading,
-        error: state.error,
-        isAuthenticated: !!state.user,
-        login,
-        register,
-        logout,
-        clearError,
-        updateUser,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import Select from 'react-select';
 import { TaskContext } from '../../context/TaskContext';
+import { useToast } from '../../context/ToastContext';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import api from '../../utils/api';
 import TaskItem from './TaskItem';
@@ -23,41 +24,6 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-const handleExport = async (type) => {
-  try {
-    // Create a timestamp using local date/time format
-    const now = new Date();
-    
-    // Format: YYYY-MM-DD_HH-MM-SS
-    const timestamp = now.getFullYear() + '-' + 
-      String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(now.getDate()).padStart(2, '0') + '_' + 
-      String(now.getHours()).padStart(2, '0') + '-' + 
-      String(now.getMinutes()).padStart(2, '0') + '-' + 
-      String(now.getSeconds()).padStart(2, '0');
-    
-    const filename = `tasks_${timestamp}.${type === 'csv' ? 'csv' : 'pdf'}`;
-    
-    // Request the export
-    const res = await api.get(`/tasks/export?type=${type}`, { responseType: 'blob' });
-    
-    // Create a download link
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    
-    // Trigger the download
-    document.body.appendChild(link);
-    link.click();
-    
-    // Clean up
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error(`Error exporting ${type}:`, error);
-  }
-};
 const TAG_OPTIONS = [
   { value: 'work', label: 'Work' },
   { value: 'personal', label: 'Personal' },
@@ -90,11 +56,12 @@ function useDueDateNotifications(tasks) {
         task._notified = true;
       }
     });
-  }, [tasks]);
+  }, [tasks]); 
 }
 
 const TaskList = ({ onEdit }) => {
   const { tasks, deleteTask, toggleTask, fetchTasks, loading, currentUser } = useContext(TaskContext);
+  const { showSuccess, showError, showInfo } = useToast();
   const [status, setStatus] = useState('');
   const [priority, setPriority] = useState('');
   const [tags, setTags] = useState([]);
@@ -130,8 +97,13 @@ const TaskList = ({ onEdit }) => {
   useEffect(() => {
     const fetchData = async () => {
       setLocalLoading(true);
-      await fetchTasks({ status, priority, tags: tags.join(',') });
-      setLocalLoading(false);
+      try {
+        await fetchTasks({ status, priority, tags: tags.join(',') });
+      } catch (err) {
+        showError('Failed to fetch tasks with the selected filters');
+      } finally {
+        setLocalLoading(false);
+      }
     };
     fetchData();
     // eslint-disable-next-line
@@ -170,6 +142,9 @@ const TaskList = ({ onEdit }) => {
       });
       await fetchTasks({ status, priority, tags: tags.join(',') });
       setContentChanged(true);
+      showSuccess('Tasks reordered successfully');
+    } catch (err) {
+      showError('Failed to reorder tasks');
     } finally {
       setLocalLoading(false);
     }
@@ -181,14 +156,20 @@ const TaskList = ({ onEdit }) => {
       await api.patch(`/tasks/${taskId}/subtasks/${subtaskId}`, { completed });
       await fetchTasks({ status, priority, tags: tags.join(',') });
       setContentChanged(true);
+      showSuccess(completed ? 'Subtask marked as complete' : 'Subtask marked as incomplete');
     } catch (err) {
-      // Optionally handle error silently
+      showError('Failed to update subtask');
     } finally {
       setLocalLoading(false);
     }
   };
 
   const handleShare = async (taskId) => {
+    if (!shareEmail.trim()) {
+      showError('Please enter an email address');
+      return;
+    }
+    
     setLocalLoading(true);
     try {
       await api.post(`/tasks/${taskId}/share`, {
@@ -199,8 +180,9 @@ const TaskList = ({ onEdit }) => {
       setShowShareForm(null);
       await fetchTasks({ status, priority, tags: tags.join(',') });
       setContentChanged(true);
+      showSuccess(`Task shared with ${shareEmail} successfully!`);
     } catch (err) {
-      // Optionally handle error silently
+      showError('Failed to share task');
     } finally {
       setLocalLoading(false);
     }
@@ -212,10 +194,52 @@ const TaskList = ({ onEdit }) => {
       await api.post(`/tasks/${taskId}/unshare`, { userId });
       await fetchTasks({ status, priority, tags: tags.join(',') });
       setContentChanged(true);
+      showSuccess('Access to task removed successfully');
     } catch (err) {
-      // Optionally handle error silently
+      showError('Failed to remove access to task');
     } finally {
       setLocalLoading(false);
+    }
+  };
+
+  const handleExport = async (type) => {
+    try {
+      showInfo(`Preparing ${type.toUpperCase()} export...`);
+      
+      // Create a timestamp using local date/time format
+      const now = new Date();
+      
+      // Format: YYYY-MM-DD_HH-MM-SS
+      const timestamp = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0') + '_' + 
+        String(now.getHours()).padStart(2, '0') + '-' + 
+        String(now.getMinutes()).padStart(2, '0') + '-' + 
+        String(now.getSeconds()).padStart(2, '0');
+      
+      const filename = `tasks_${timestamp}.${type === 'csv' ? 'csv' : 'pdf'}`;
+      
+      // Request the export
+      const res = await api.get(`/tasks/export?type=${type}`, { responseType: 'blob' });
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      
+      // Trigger the download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSuccess(`Tasks exported as ${type.toUpperCase()} successfully!`);
+    } catch (error) {
+      console.error(`Error exporting ${type}:`, error);
+      showError(`Failed to export tasks as ${type.toUpperCase()}`);
     }
   };
 
@@ -269,6 +293,7 @@ const TaskList = ({ onEdit }) => {
     setTags([]);
     setSearchInput('');
     setContentChanged(true);
+    showInfo('All filters cleared');
   };
 
   if (loading && !localLoading) {

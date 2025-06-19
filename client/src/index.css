@@ -174,16 +174,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Error message */
-.error-message {
-  color: var(--danger-color);
-  background: var(--danger-light);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-sm);
-  border: 1px solid #fecaca;
-  margin-bottom: var(--spacing-md);
-}
-
 /* Loading state */
 .loading {
   opacity: 0.6;

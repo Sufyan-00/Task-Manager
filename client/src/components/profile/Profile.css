@@ -98,24 +98,9 @@
   border-radius: 3px;
 }
 
-/* Message styles */
-.message {
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.message.success {
-  background: #d1fae5;
-  border: 1px solid #10b981;
-  color: #065f46;
-}
-
-.message.error {
-  background: #fee2e2;
-  border: 1px solid #ef4444;
-  color: #b91c1c;
+/* Tab content */
+.tab-content {
+  /* Container for tab content */
 }
 
 /* Form container */
@@ -269,64 +254,6 @@
 
 .cancel-delete-btn:hover {
   background: var(--gray-100, #f3f4f6);
-}
-
-.total-tasks {
-  border-top: 4px solid #3b82f6;
-}
-
-.completed-tasks {
-  border-top: 4px solid #10b981;
-}
-
-.pending-tasks {
-  border-top: 4px solid #f59e0b;
-}
-
-.overdue-tasks {
-  border-top: 4px solid #ef4444;
-}
-
-.high-priority-tasks {
-  border-top: 4px solid #8b5cf6;
-}
-
-/* Completion Rate */
-.completion-rate {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--gray-200, #e5e7eb);
-}
-
-.completion-rate h3 {
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  color: var(--gray-700, #374151);
-}
-
-.progress-container {
-  height: 24px;
-  background: var(--gray-200, #e5e7eb);
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(to right, #3b82f6, #4f46e5);
-  border-radius: 12px;
-  transition: width 1s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-}
-
-.progress-text {
-  color: white;
-  font-weight: 600;
-  font-size: 0.9rem;
 }
 
 /* Loading spinner */

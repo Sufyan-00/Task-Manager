@@ -2,57 +2,47 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import TaskForm from '../components/Tasks/TaskForm';
 import TaskList from '../components/Tasks/TaskList';
 import { AuthContext } from '../context/AuthContext';
-import Message from '../components/UI/Message';
 import './Dashboard.css';
 
-const Dashboard = () => {
+const Dashboard = () => {  
   const [editingTask, setEditingTask] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [dashboardMessage, setDashboardMessage] = useState({ type: '', text: '' });
   const { user } = useContext(AuthContext);
   const modalRef = useRef(null);
-  
+
+
   useEffect(() => {
-    // Animation for smooth entrance
     const timer = setTimeout(() => {
       setLoaded(true);
     }, 100);
-    
-    // Update time every second
+
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    
+
     return () => {
       clearTimeout(timer);
       clearInterval(timeInterval);
     };
   }, []);
 
-  // Update the modal effect in your Dashboard component
   useEffect(() => {
     if (modalOpen) {
-      // Get scrollbar width (to prevent content shift)
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      
-      // Apply styles to body
       document.body.classList.add('modal-open');
       document.body.style.paddingRight = `${scrollbarWidth}px`;
-      
-      // Handle modal click outside
+
       const handleClickOutside = (e) => {
         if (modalRef.current && !modalRef.current.contains(e.target)) {
           closeModal();
         }
       };
-      
-      // Add event listener with capture to catch events early
+
       document.addEventListener('mousedown', handleClickOutside, true);
-      
+
       return () => {
-        // Clean up
         document.body.classList.remove('modal-open');
         document.body.style.paddingRight = '';
         document.removeEventListener('mousedown', handleClickOutside, true);
@@ -60,7 +50,6 @@ const Dashboard = () => {
     }
   }, [modalOpen]);
 
-  // Handle ESC key to close modal
   useEffect(() => {
     const handleEscKey = (event) => {
       if (event.key === 'Escape') {
@@ -71,7 +60,7 @@ const Dashboard = () => {
     if (modalOpen) {
       document.addEventListener('keydown', handleEscKey);
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscKey);
     };
@@ -89,17 +78,16 @@ const Dashboard = () => {
 
   const openModal = () => {
     setModalOpen(true);
-    setEditingTask(null); // Reset editing task when opening modal for new task
+    setEditingTask(null);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setTimeout(() => {
       setEditingTask(null);
-    }, 300); // Wait for animation to complete before resetting
+    }, 300);
   };
 
-  // Get current time of day for greeting
   const getGreeting = () => {
     const hour = currentTime.getHours();
     if (hour < 12) return 'Good morning';
@@ -107,9 +95,8 @@ const Dashboard = () => {
     return 'Good evening';
   };
 
-  // Format current time as HH:MM:SS
   const formatTime = () => {
-    return currentTime.toLocaleTimeString('en-US', { 
+    return currentTime.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -127,18 +114,17 @@ const Dashboard = () => {
               <span className="user-name">{user?.name || 'there'}</span>
             </h1>
             <div className="dashboard-datetime">
-              <p className="dashboard-date">{currentTime.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              <p className="dashboard-date">{currentTime.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}</p>
               <span className="dashboard-time">{formatTime()}</span>
             </div>
           </div>
-          
-          <button 
-            className="add-task-btn" 
+          <button
+            className="add-task-btn"
             onClick={openModal}
             aria-label="Add new task"
           >
@@ -147,40 +133,26 @@ const Dashboard = () => {
             <div className="btn-background"></div>
           </button>
         </div>
-
-        {dashboardMessage.text && (
-          <Message 
-            type={dashboardMessage.type} 
-            onDismiss={() => setDashboardMessage({ type: '', text: '' })}
-          >
-            {dashboardMessage.text}
-          </Message>
-        )}
-
         <div className="dashboard-content">
-          <div className="dashboard-list-section full-width">          
+          <div className="dashboard-list-section full-width">
             <TaskList onEdit={handleEdit} />
           </div>
         </div>
       </div>
-      
-      {/* Floating button moved outside the dashboard container */}
-      <button 
-        className="floating-add-btn" 
+      <button
+        className="floating-add-btn"
         onClick={openModal}
         aria-label="Add new task"
         type="button">
       </button>
-      
-      {/* Modal for task form */}
       <div className={`task-modal-overlay ${modalOpen ? 'modal-visible' : ''}`}>
-        <div 
+        <div
           className={`task-modal ${modalOpen ? 'modal-visible' : ''}`}
           ref={modalRef}
         >
           <div className="modal-content">
-            <button 
-              className="modal-close" 
+            <button
+              className="modal-close"
               onClick={closeModal}
               aria-label="Close modal"
             >

@@ -3,6 +3,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { TaskProvider } from "./context/TaskContext";
+import { ToastProvider } from "./context/ToastContext";
+import ToastContainer from "./components/UI/Toast";
 import Login from "./components/Auth/Login";
 import Register from "./components/Auth/Register";
 import Header from "./components/Layout/Header";
@@ -13,10 +15,11 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
-  <AuthProvider>
-    <TaskProvider>
+  <ToastProvider>
+    <AuthProvider>
       <Router>
         <Header />
+        <ToastContainer />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -25,7 +28,9 @@ const App = () => (
             path="/dashboard"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <TaskProvider>
+                  <Dashboard />
+                </TaskProvider>
               </PrivateRoute>
             }
           />
@@ -40,8 +45,8 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
-    </TaskProvider>
-  </AuthProvider>
+    </AuthProvider>
+  </ToastProvider>
 );
 
 export default App;

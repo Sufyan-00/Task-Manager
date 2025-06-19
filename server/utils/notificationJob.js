@@ -3,27 +3,16 @@ import Task from '../models/Task.js';
 import User from '../models/User.js';
 import { transporter } from './mailer.js';
 
-export const startNotificationJob = () => {
-  // Run every day at 9 AM
-  cron.schedule('0 9 * * *', async () => {
-    try {
-      // Find tasks due today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const tasks = await Task.find({
-        dueDate: {
-          $gte: today,
-          $lt: tomorrow
-        },
-        status: { $ne: 'completed' }
-      }).populate('user', 'email name');
-      
-      // Send notifications for each task
-      for (const task of tasks) {
+cron.schedule('*/1 * * * *', async () => { // every 10 minutes
+  try{const now = new Date();
+  const soon = new Date(now.getTime() + 60 * 60 * 1000); // next 1 hour
+  const tasks = await Task.find({
+    dueDate: { $gte: now, $lte: soon },
+    notify: true,
+    notified: { $ne: true },
+    completed: false,
+  }).populate('user');
+  for (const task of tasks) {
         if (!task.user || !task.user.email) continue;
         
         await transporter.sendMail({
@@ -42,10 +31,8 @@ export const startNotificationJob = () => {
             <p>Please complete this task as soon as possible.</p>
           `
         });
+      }}
+      catch{
+        console.error('Notification job error:', error);
       }
-    } catch (error) {
-      // Log error but don't crash the application
-      console.error('Notification job error:', error);
-    }
-  });
-};
+});
