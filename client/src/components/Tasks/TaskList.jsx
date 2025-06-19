@@ -36,27 +36,58 @@ const TAG_OPTIONS = [
 function useDueDateNotifications(tasks) {
   useEffect(() => {
     if (!("Notification" in window)) return;
-    Notification.requestPermission();
+
+    // Request permission only if needed
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    // Get notified task IDs from localStorage
+    let notifiedIds = [];
+    try {
+      notifiedIds = JSON.parse(localStorage.getItem('notifiedTaskIds') || '[]');
+    } catch {
+      notifiedIds = [];
+    }
 
     const now = new Date();
     const soon = new Date(now.getTime() + 60 * 60 * 1000);
 
+    const updatedNotifiedIds = [...notifiedIds];
+
     tasks.forEach(task => {
+      const taskId = task._id || task.id;
+      const due = new Date(task.dueDate);
+
+      // Remove from notified if completed or due date passed
+      if (
+        (task.completed || due < now) &&
+        notifiedIds.includes(taskId)
+      ) {
+        const idx = updatedNotifiedIds.indexOf(taskId);
+        if (idx !== -1) updatedNotifiedIds.splice(idx, 1);
+      }
+
+      // Show notification if due soon, not completed, not already notified
       if (
         task.notify &&
         !task.completed &&
         task.dueDate &&
-        new Date(task.dueDate) > now &&
-        new Date(task.dueDate) <= soon &&
-        !task._notified
+        due > now &&
+        due <= soon &&
+        !notifiedIds.includes(taskId) &&
+        Notification.permission === "granted"
       ) {
         new Notification(`Task Due Soon: ${task.title}`, {
-          body: `Your task "${task.title}" is due at ${new Date(task.dueDate).toLocaleTimeString()}.`,
+          body: `Your task "${task.title}" is due at ${due.toLocaleTimeString()}.`,
         });
-        task._notified = true;
+        updatedNotifiedIds.push(taskId);
       }
     });
-  }, [tasks]); 
+
+    // Save updated notified IDs
+    localStorage.setItem('notifiedTaskIds', JSON.stringify(updatedNotifiedIds));
+  }, [tasks]);
 }
 
 const TaskList = ({ onEdit }) => {
