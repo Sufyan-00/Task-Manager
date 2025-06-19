@@ -2,6 +2,10 @@
 
 A modern, full-stack task management application built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This intuitive task manager lets you organize your work, collaborate with team members, and boost your productivity.
 
+## Live Demo
+
+Check out the live application: [Task Manager Live Demo](https://task-manager-urfe.onrender.com)
+
 ## Features
 
 ### User Authentication & Profile Management
